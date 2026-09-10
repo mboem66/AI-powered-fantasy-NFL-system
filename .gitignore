@@ -1,0 +1,16 @@
+.venv/
+__pycache__/
+*.py[cod]
+*.egg-info/
+.pytest_cache/
+.env
+data/**/*.parquet
+data/manifests/*.json
+artifacts/*
+!artifacts/.gitkeep
+tmp/
+# Personal development instructions stay on this computer.
+local/
+# Keep supporting documentation local; include the submitted proposal.
+docs/*
+!docs/proposal/

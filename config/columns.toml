@@ -1,0 +1,63 @@
+# These lists control which source columns are saved in Parquet.
+# Names match nflverse so its data dictionaries remain useful.
+# Date replaces weekday; scores replace derived result/total columns.
+schedules = [
+  "game_id", "season", "game_type", "week", "gameday", "gametime",
+  "away_team", "home_team", "away_score", "home_score", "location",
+  "away_rest", "home_rest", "spread_line", "total_line",
+  "stadium_id", "stadium", "roof", "surface", "temp", "wind",
+]
+
+# Keep offensive production and usage broad; omit kicking/punting and IDP stats.
+player_stats = [
+  "player_id", "player_display_name", "position", "season", "week",
+  "season_type", "game_id", "team", "opponent_team",
+  "completions", "attempts", "passing_yards", "passing_tds", "passing_interceptions",
+  "sacks_suffered", "sack_yards_lost", "sack_fumbles", "sack_fumbles_lost",
+  "passing_air_yards", "passing_yards_after_catch", "passing_first_downs",
+  "passing_epa", "passing_cpoe", "passing_2pt_conversions", "pacr",
+  "passing_10", "passing_16", "passing_20", "passing_40",
+  "carries", "rushing_yards", "rushing_tds", "rushing_fumbles", "rushing_fumbles_lost",
+  "rushing_first_downs", "rushing_epa", "rushing_2pt_conversions",
+  "rushing_10", "rushing_12", "rushing_20", "rushing_40",
+  "receptions", "targets", "receiving_yards", "receiving_tds",
+  "receiving_fumbles", "receiving_fumbles_lost", "receiving_air_yards",
+  "receiving_yards_after_catch", "receiving_first_downs", "receiving_epa",
+  "receiving_2pt_conversions", "receiving_10", "receiving_16", "receiving_20",
+  "receiving_40", "racr", "target_share", "air_yards_share", "wopr",
+  "special_teams_tds", "fumble_recovery_tds", "fumbles_lost_total",
+  "fantasy_points", "fantasy_points_ppr",
+]
+
+# Team offense supports workload denominators and opponent yards/TDs allowed.
+team_stats = [
+  "season", "week", "season_type", "game_id", "team", "opponent_team",
+  "completions", "attempts", "passing_yards", "passing_tds", "passing_interceptions",
+  "sacks_suffered", "sack_yards_lost", "passing_air_yards",
+  "passing_yards_after_catch", "passing_first_downs", "passing_epa", "passing_cpoe",
+  "carries", "rushing_yards", "rushing_tds", "rushing_first_downs", "rushing_epa",
+  "receptions", "targets", "receiving_yards", "receiving_tds", "receiving_air_yards",
+  "receiving_yards_after_catch", "receiving_first_downs", "receiving_epa",
+  "fumbles_lost_total", "def_sacks", "def_qb_hits", "def_interceptions",
+  "def_tackles_for_loss", "def_fumbles_forced", "def_pass_defended",
+]
+
+# Keep season/team membership here; biographical details belong in players.
+rosters = [
+  "season", "week", "game_type", "team", "gsis_id", "pfr_id", "full_name",
+  "position", "depth_chart_position", "status", "status_description_abbr",
+]
+
+# Identity, current team/status, and one headshot; no biographical/draft features.
+players = [
+  "gsis_id", "pfr_id", "display_name", "position", "latest_team", "status", "headshot",
+]
+
+# A single logo is enough for the later app; omit duplicate branding assets.
+teams = ["team_abbr", "team_name", "team_conf", "team_division", "team_logo_espn"]
+
+# PFR player IDs are needed to join snaps to the GSIS player reference.
+snap_counts = [
+  "game_id", "season", "game_type", "week", "pfr_player_id", "player",
+  "position", "team", "opponent", "offense_snaps", "offense_pct",
+]

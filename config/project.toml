@@ -1,0 +1,20 @@
+# Change seasons here instead of editing Python code.
+[data]
+historical_start = 2021
+historical_end = 2025
+current_season = 2026
+positions = ["QB", "RB", "WR", "TE"]
+
+# Used when we implement and validate the scoring transformation.
+[scoring]
+format = "full_ppr"
+reception = 1.0
+passing_yard = 0.04
+passing_td = 4.0
+interception = -2.0
+rushing_yard = 0.1
+rushing_td = 6.0
+receiving_yard = 0.1
+receiving_td = 6.0
+fumble_lost = -2.0
+two_point_conversion = 2.0

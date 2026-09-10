@@ -1,0 +1,8 @@
+# Use consistent source-code line endings and preserve binary files exactly.
+* text=auto
+*.py text eol=lf
+*.md text eol=lf
+*.toml text eol=lf
+*.json text eol=lf
+*.pdf binary
+*.parquet binary
