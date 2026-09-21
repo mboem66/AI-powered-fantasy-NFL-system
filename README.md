@@ -45,8 +45,8 @@ recommendations, and retrieval into dedicated folders.
 
 ## Task 1: NFL Data Collection and Feature Engineering
 
-Completed work includes the data download pipeline, Parquet storage, and column
-selection described below.
+Completed work includes the data download pipeline, Parquet storage, column
+selection, and the historical player-game table described below.
 
 ### Data collection
 
@@ -77,3 +77,9 @@ Column selection preserved all row counts across the 29 files and reduced local
 storage from approximately **9.5 MB to 4.4 MB**. The retained fields are defined in
 [the column configuration](config/columns.toml), with selection rationale in
 [the column guide](docs/columns.md).
+
+### Historical player-game dataset
+
+Combined regular-season **QB, RB, WR, and TE** statistics with game information
+and available snap counts into one Parquet dataset. Each row represents one
+player in one game. Full-PPR points were calculated and checked against nflverse.

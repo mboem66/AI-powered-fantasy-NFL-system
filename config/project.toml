@@ -5,7 +5,7 @@ historical_end = 2025
 current_season = 2026
 positions = ["QB", "RB", "WR", "TE"]
 
-# Used when we implement and validate the scoring transformation.
+# Match nflverse PPR: offensive lost fumbles, special-teams TDs, no recovery-TD bonus.
 [scoring]
 format = "full_ppr"
 reception = 1.0
@@ -18,3 +18,4 @@ receiving_yard = 0.1
 receiving_td = 6.0
 fumble_lost = -2.0
 two_point_conversion = 2.0
+special_teams_td = 6.0

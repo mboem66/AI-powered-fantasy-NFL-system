@@ -9,8 +9,7 @@ data/manifests/*.json
 artifacts/*
 !artifacts/.gitkeep
 tmp/
-# Personal development instructions stay on this computer.
 local/
-# Keep supporting documentation local; include the submitted proposal.
 docs/*
 !docs/proposal/
+tests/test_player_games.py
