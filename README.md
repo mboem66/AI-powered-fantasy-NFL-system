@@ -8,7 +8,7 @@ start/sit decisions through a future web app. The submitted task breakdown in
 
 ## Initial decisions
 
-- Historical seasons: **2021-2025**; update season: **2026**.
+- Historical seasons: **2023-2025**; update season: **2026**.
 - Prediction positions: **QB, RB, WR, TE**.
 - Scoring: **full PPR**. Scoring constants are recorded in `config/project.toml`.
 - Source: **nflverse**, accessed through its Python package **nflreadpy**.
@@ -52,7 +52,7 @@ selection, and the historical player-game table described below.
 
 The initial pipeline collected **29 Parquet files**, covering player statistics,
 team statistics, schedules, rosters, snap counts, and player/team reference data.
-Historical data covers **2021-2025**. Schedules and rosters for **2026** were also
+The active historical range is **2023-2025**. Schedules and rosters for **2026** were also
 available at the initial download. The pipeline supports current-season refreshes
 as new results become available and records download outcomes for review.
 
@@ -83,3 +83,13 @@ storage from approximately **9.5 MB to 4.4 MB**. The retained fields are defined
 Combined regular-season **QB, RB, WR, and TE** statistics with game information
 and available snap counts into one Parquet dataset. Each row represents one
 player in one game. Full-PPR points were calculated and checked against nflverse.
+
+### Recent performance and upcoming games
+
+Added previous-game PPR points and three-game averages for PPR points, targets,
+carries, and offensive snap percentage. Opponent context includes recent points
+allowed to the player's position. Features use earlier games only.
+
+Upcoming-game records include active players with recent offensive participation.
+One update command refreshes
+the data and rebuilds both historical and upcoming-game datasets.

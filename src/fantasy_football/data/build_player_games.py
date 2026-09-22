@@ -1,4 +1,4 @@
-"""Build historical player-game data and verify scoring from local source files."""
+"""Build historical player-game data"""
 
 from datetime import datetime, timezone
 import hashlib
@@ -14,7 +14,7 @@ from fantasy_football.data.storage import save_parquet, validate_download
 
 
 def build(root: Path, settings: dict) -> dict:
-    """Use available seasons, require historical stats, and audit input snapshots."""
+    """Use available seasons, require historical stats"""
     data = settings["data"]
     history = list(range(data["historical_start"], data["historical_end"] + 1))
     inputs = []

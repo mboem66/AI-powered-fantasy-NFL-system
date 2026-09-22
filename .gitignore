@@ -13,3 +13,4 @@ local/
 docs/*
 !docs/proposal/
 tests/test_player_games.py
+tests/test_features.py

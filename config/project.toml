@@ -1,6 +1,6 @@
 # Change seasons here instead of editing Python code.
 [data]
-historical_start = 2021
+historical_start = 2023
 historical_end = 2025
 current_season = 2026
 positions = ["QB", "RB", "WR", "TE"]
@@ -19,3 +19,9 @@ receiving_td = 6.0
 fumble_lost = -2.0
 two_point_conversion = 2.0
 special_teams_td = 6.0
+
+[features]
+recent_games = 3
+# Carry regular-season history across the offseason, but not indefinitely.
+history_days = 365
+active_roster_status = "ACT"

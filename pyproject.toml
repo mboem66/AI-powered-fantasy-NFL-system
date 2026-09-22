@@ -7,7 +7,7 @@ name = "fantasy-football-capstone"
 version = "0.1.0"
 description = "An explainable fantasy football prediction capstone"
 requires-python = ">=3.11"
-dependencies = ["nflreadpy>=0.1,<0.2", "polars>=1.0,<2"]
+dependencies = ["nflreadpy>=0.1,<0.2", "polars>=1.0,<2", "tzdata>=2025.2"]
 
 [project.optional-dependencies]
 dev = ["pytest>=8,<10"]
