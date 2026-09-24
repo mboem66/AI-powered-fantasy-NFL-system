@@ -75,8 +75,7 @@ support later feature engineering.
 
 Column selection preserved all row counts across the 29 files and reduced local
 storage from approximately **9.5 MB to 4.4 MB**. The retained fields are defined in
-[the column configuration](config/columns.toml), with selection rationale in
-[the column guide](docs/columns.md).
+[the column configuration](config/columns.toml)
 
 ### Historical player-game dataset
 
@@ -89,6 +88,8 @@ player in one game. Full-PPR points were calculated and checked against nflverse
 Added previous-game PPR points and three-game averages for PPR points, targets,
 carries, and offensive snap percentage. Opponent context includes recent points
 allowed to the player's position. Features use earlier games only.
+Usage trends show changes in targets, carries, and snap share from the most recent
+appearance compared with the preceding two appearances.
 
 Upcoming-game records include active players with recent offensive participation.
 One update command refreshes

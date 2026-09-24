@@ -2,6 +2,7 @@ from bisect import bisect_left
 from collections import defaultdict
 from datetime import timedelta
 from statistics import mean
+from math import isfinite
 
 
 def make_index(rows, key):
@@ -28,6 +29,16 @@ def average(rows, field):
     return mean(values) if values else None
 
 
+def usage_trend(rows, field):
+    """Last appearance minus the preceding two; require all three values."""
+    if len(rows) < 3:
+        return None
+    values = [r.get(field) for r in rows[-3:]]
+    if any(value is None or not isfinite(value) for value in values):
+        return None
+    return values[-1] - mean(values[:2])
+
+
 def features_for(row, player_index, defense_index, team_index, settings, as_of_date):
     """Return only pregame features, actual points are added separately"""
     count, days = settings["recent_games"], settings["history_days"]
@@ -49,6 +60,9 @@ def features_for(row, player_index, defense_index, team_index, settings, as_of_d
         "targets_recent_avg": average(recent, "targets"),
         "carries_recent_avg": average(recent, "carries"),
         "snap_share_recent_avg": average(recent, "offense_pct"),
+        "targets_trend": usage_trend(appearances, "targets"),
+        "carries_trend": usage_trend(appearances, "carries"),
+        "snap_share_trend": usage_trend(appearances, "offense_pct"),
         "history_games": len(recent),
         "snap_history_games": sum(r.get("offense_pct") is not None for r in recent),
         "history_crosses_season": any(r["season"] != row["season"] for r in recent),
