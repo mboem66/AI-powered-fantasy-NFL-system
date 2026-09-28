@@ -23,16 +23,16 @@ Capstone Project/
 |-- src/fantasy_football/
 |   |-- config.py             Load settings and resolve project paths
 |   |-- data/                 Task 1: download and prepare data
-|   |-- features/             Task 1: future pregame feature transformations
+|   |-- features/             Pregame averages, usage trends, and matchup features
 |   |-- modeling/             Tasks 2, 3, 6: training and evaluation
 |   |-- recommendations/      Task 4: start/sit and explanations
 |   `-- rag/                  Task 5: retrieval and grounded answers
 |-- app/                      Future web application
 |-- data/
 |   |-- raw/                  Source tables, organized by dataset and season
-|   |-- processed/            Future cleaned tables and player-week features
+|   |-- processed/            Cleaned tables and player-week features
 |   `-- manifests/            Download reports with timestamps and schemas
-|-- artifacts/                Future saved models and evaluation results
+|-- artifacts/                Local model evaluation results
 |-- notebooks/                Exploration; reusable logic belongs in src/
 |-- tests/                    Automated correctness checks
 |-- docs/                     Task checklist, sources, and column guide
@@ -94,3 +94,11 @@ appearance compared with the preceding two appearances.
 Upcoming-game records include active players with recent offensive participation.
 One update command refreshes
 the data and rebuilds both historical and upcoming-game datasets.
+
+## Task 2: First Machine Learning Experiment
+
+Added recent passing-attempt, passing-yard, and passing-touchdown averages.
+Trained a Linear Regression model on 2023 player-game records and compared it
+with a recent-PPR-average baseline on the same eligible 2024 records. Results
+include MAE, RMSE, and R-squared overall and by position, plus predicted versus
+actual points. The 2025 season remains reserved for final testing.
