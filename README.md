@@ -14,6 +14,19 @@ start/sit decisions through a future web app. The submitted task breakdown in
 - Source: **nflverse**, accessed through its Python package **nflreadpy**.
 - Storage: compressed **Parquet** for source tables and later model datasets.
 
+## Planned timeline
+
+Estimated durations for each task:
+
+| Task | Focus | Estimated duration |
+| --- | --- | --- |
+| Task 1 | NFL Data Collection and Feature Engineering | 2 weeks |
+| Task 2 | Machine Learning Fantasy Point Prediction | 2-3 weeks |
+| Task 3 | Deep Learning Sequential Prediction | 3-4 weeks |
+| Task 4 | Explainable Start/Sit Recommendation System | 3 weeks |
+| Task 5 | RAG and LLM Fantasy Football Assistant | 3 weeks |
+| Task 6 | Boom/Bust and Risk Prediction | 1 week |
+
 ## Folder structure
 
 ```text
