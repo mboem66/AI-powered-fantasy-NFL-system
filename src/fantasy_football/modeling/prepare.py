@@ -1,14 +1,26 @@
 import numpy as np
 import polars as pl
 from sklearn.compose import ColumnTransformer
+from sklearn.ensemble import RandomForestRegressor
 from sklearn.impute import SimpleImputer
 from sklearn.linear_model import LinearRegression
 from sklearn.pipeline import Pipeline
 from sklearn.preprocessing import OneHotEncoder
+from xgboost import XGBRegressor
 
 from fantasy_football.data.cleaning import require_unique
 
 TRAIN_SEASON, VALIDATION_SEASON = 2023, 2024
+# Initial settings only. All models use the same records without a tuning search.
+MODEL_SETTINGS = {
+    "linear_regression": {},
+    "random_forest": {"n_estimators": 200, "min_samples_leaf": 5,
+                      "random_state": 42, "n_jobs": 1},
+    "xgboost": {"n_estimators": 200, "max_depth": 3, "learning_rate": 0.05,
+                "objective": "reg:squarederror", "tree_method": "hist",
+                "random_state": 42, "n_jobs": 1},
+}
+METHODS = ("baseline", *MODEL_SETTINGS)
 POSITIONS = ["QB", "RB", "WR", "TE"]
 TARGET = "target_ppr_points"
 IDENTIFIERS = ["player_id", "player_display_name", "position", "season", "week",
@@ -59,14 +71,19 @@ def model_inputs(frame):
     return np.column_stack([numeric, frame["position"].to_numpy()])
 
 
-def make_model():
-    """One shared model, with position indicators and training-only numeric medians."""
+def make_model(name="linear_regression"):
+    """Give each estimator its own preprocessing, fitted on training records only."""
+    estimators = {"linear_regression": LinearRegression,
+                  "random_forest": RandomForestRegressor, "xgboost": XGBRegressor}
+    if name not in estimators:
+        raise ValueError(f"Unknown model: {name}")
     numeric_columns = list(range(len(NUMERIC_FEATURES)))
     preprocessing = ColumnTransformer([
         # An entirely empty training feature is retained and filled with zero.
         ("numeric", SimpleImputer(strategy="median", keep_empty_features=True), numeric_columns),
-        # QB is the reference category; numeric feature weights are shared.
+        # Use the same position encoding for every estimator, with QB as reference.
         ("position", OneHotEncoder(categories=[POSITIONS], drop="first", sparse_output=False),
          [len(NUMERIC_FEATURES)]),
     ])
-    return Pipeline([("preprocess", preprocessing), ("regression", LinearRegression())])
+    estimator = estimators[name](**MODEL_SETTINGS[name])
+    return Pipeline([("preprocess", preprocessing), ("regression", estimator)])

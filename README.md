@@ -108,10 +108,12 @@ Upcoming-game records include active players with recent offensive participation
 One update command refreshes
 the data and rebuilds both historical and upcoming-game datasets.
 
-## Task 2: First Machine Learning Experiment
+## Task 2: Machine Learning Comparison
 
 Added recent passing-attempt, passing-yard, and passing-touchdown averages.
-Trained a Linear Regression model on 2023 player-game records and compared it
-with a recent-PPR-average baseline on the same eligible 2024 records. Results
-include MAE, RMSE, and R-squared overall and by position, plus predicted versus
-actual points. The 2025 season remains reserved for final testing.
+Trained Linear Regression, Random Forest, and XGBoost on 2023 player-game records
+and compared them with a recent-PPR-average baseline on the same eligible 2024
+records. Results include MAE, RMSE, and R-squared overall and by position,
+training times, and predicted versus actual points. This comparison uses initial
+model settings without tuning or selecting a winner. The 2025 season remains
+reserved for final testing.
