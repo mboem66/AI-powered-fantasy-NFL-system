@@ -1,6 +1,7 @@
 """Compare baseline, Linear Regression, Random Forest, and XGBoost on 2024."""
 
 from datetime import datetime, timezone
+import argparse
 from importlib.metadata import version
 import json
 from shutil import copy2
@@ -12,7 +13,7 @@ from sklearn.metrics import mean_absolute_error, mean_squared_error, r2_score
 from fantasy_football.config import PROJECT_ROOT
 from fantasy_football.data.storage import save_parquet
 from fantasy_football.modeling.prepare import (
-    IDENTIFIERS, NUMERIC_FEATURES, POSITIONS, TARGET, TRAIN_SEASON, VALIDATION_SEASON,
+    IDENTIFIERS, NUMERIC_FEATURES, RECENT_FEATURES, POSITIONS, TARGET, TRAIN_SEASONS, VALIDATION_SEASON,
     make_model, model_inputs, split_records,
     METHODS, MODEL_SETTINGS,
 )
@@ -52,24 +53,25 @@ def backup_results(output):
     return folder
 
 
-def run(root=PROJECT_ROOT):
+def run(root=PROJECT_ROOT, training_seasons=TRAIN_SEASONS, use_season_averages=True, output=None):
     started = perf_counter()
+    features = NUMERIC_FEATURES if use_season_averages else RECENT_FEATURES
     source = root / "data/processed/historical_features.parquet"
     if not source.exists():
         raise FileNotFoundError("Build features first with: python -m fantasy_football.update")
     # 2025 is reserved for the final test; 2026 is not part of this experiment.
     frame = pl.scan_parquet(source).filter(
-        pl.col("season").is_in([TRAIN_SEASON, VALIDATION_SEASON])
+        pl.col("season").is_in([*training_seasons, VALIDATION_SEASON])
     ).collect()
-    training, validation, counts = split_records(frame)
-    x_train, x_validation = model_inputs(training), model_inputs(validation)
+    training, validation, counts = split_records(frame, training_seasons, features)
+    x_train, x_validation = model_inputs(training, features), model_inputs(validation, features)
     predictions = validation.select(*IDENTIFIERS, TARGET).with_columns(
         validation["ppr_recent_avg"].alias("baseline_prediction"),
     )
     timings = {"baseline": 0.0}  # The baseline has no fitted estimator.
     for name in MODEL_SETTINGS:
-        print(f"Fitting {name} on {TRAIN_SEASON}...")
-        model = make_model(name)
+        print(f"Fitting {name} on {list(training_seasons)}...")
+        model = make_model(name, features)
         fit_started = perf_counter()
         # Do not pass validation outcomes to fitting or early stopping.
         model.fit(x_train, training[TARGET].to_numpy())
@@ -85,7 +87,7 @@ def run(root=PROJECT_ROOT):
     metrics = evaluate(predictions).with_columns(
         pl.col("model").replace_strict(timings, return_dtype=pl.Float64).alias("training_seconds")
     )
-    output = root / "artifacts/task2"
+    output = root / (output or "artifacts/task2")
     output.mkdir(parents=True, exist_ok=True)
     backup = backup_results(output)
     save_parquet(predictions, output / "validation_predictions.parquet")
@@ -94,16 +96,18 @@ def run(root=PROJECT_ROOT):
         "run_at_utc": datetime.now(timezone.utc).isoformat(),
         "source": str(source.relative_to(root)), "scikit_learn_version": version("scikit-learn"),
         "xgboost_version": version("xgboost"), "model_settings": MODEL_SETTINGS,
-        "training_season": TRAIN_SEASON, "validation_season": VALIDATION_SEASON,
-        "reserved_test_season": 2025, "numeric_features": NUMERIC_FEATURES,
+        "training_seasons": list(training_seasons), "validation_season": VALIDATION_SEASON,
+        "reserved_test_season": 2025, "numeric_features": features,
+        "season_averages": use_season_averages,
         "categorical_features": ["position"], "target": TARGET, "records": counts,
         "population": "Observed player-games with finite targets, prior PPR history and recent participation",
-        "preprocessing": "2023 medians; empty training columns use zero; position indicators with QB reference",
+        "preprocessing": "Training-only medians; empty training columns use zero; position indicators with QB reference",
         "training_seconds": timings, "elapsed_seconds": perf_counter() - started,
         "previous_results_backup": str(backup.relative_to(root)) if backup else None,
     }
     (output / "run_summary.json").write_text(json.dumps(report, indent=2), encoding="utf-8")
-    print(f"Training: {TRAIN_SEASON} ({training.height:,} records)")
+    print(f"Training: {list(training_seasons)} ({training.height:,} records)")
+    print(f"Numeric inputs: {len(features)}; season-to-date averages: {use_season_averages}")
     print(f"Validation: {VALIDATION_SEASON} ({validation.height:,} records); 2025 remains reserved.")
     for season, count in counts.items():
         print(f"{season}: excluded {count['available'] - count['included']:,} records {count['excluded']}")
@@ -118,4 +122,11 @@ def run(root=PROJECT_ROOT):
 
 
 if __name__ == "__main__":
-    run()
+    parser = argparse.ArgumentParser(description=__doc__)
+    parser.add_argument("--train-start", type=int, choices=[2021, 2022, 2023], default=2021,
+                        help="First training season; training always ends in 2023")
+    parser.add_argument("--recent-only", action="store_true", help="Compare without season-to-date features")
+    parser.add_argument("--output", default="artifacts/task2", help="Results folder relative to the project")
+    args = parser.parse_args()
+    run(training_seasons=tuple(range(args.train_start, 2024)),
+        use_season_averages=not args.recent_only, output=args.output)

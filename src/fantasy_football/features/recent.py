@@ -25,7 +25,7 @@ def previous(index, key, cutoff, count, history_days):
 
 
 def average(rows, field):
-    values = [r[field] for r in rows if r.get(field) is not None]
+    values = [r[field] for r in rows if r.get(field) is not None and isfinite(r[field])]
     return mean(values) if values else None
 
 
@@ -49,12 +49,24 @@ def features_for(row, player_index, defense_index, team_index, settings, as_of_d
     team_game_ids = {r["game_id"] for r in team_games}
     # Look through recent calendar history for participation in those team games.
     appearances = previous(player_index, row["player_id"], cutoff, 100, days)
+    # Use the NFL season field, not the calendar year (January games count too).
+    history, dates = player_index.get(row["player_id"], ([], []))
+    season_games = [r for r in history[:bisect_left(dates, cutoff)]
+                    if r["season"] == row["season"]]
     participated = any(
         r["game_id"] in team_game_ids and r["team"] == row["team"] and
         any((r.get(c) or 0) > 0 for c in ("offense_snaps", "attempts", "targets", "carries"))
         for r in appearances
     )
     return {
+        "season_history_games": len(season_games),
+        "ppr_season_avg": average(season_games, "calculated_ppr_points"),
+        "targets_season_avg": average(season_games, "targets"),
+        "carries_season_avg": average(season_games, "carries"),
+        "snap_share_season_avg": average(season_games, "offense_pct"),
+        "passing_attempts_season_avg": average(season_games, "attempts"),
+        "passing_yards_season_avg": average(season_games, "passing_yards"),
+        "passing_tds_season_avg": average(season_games, "passing_tds"),
         "ppr_last_game": recent[-1]["calculated_ppr_points"] if recent else None,
         "ppr_recent_avg": average(recent, "calculated_ppr_points"),
         "targets_recent_avg": average(recent, "targets"),

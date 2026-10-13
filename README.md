@@ -8,7 +8,7 @@ start/sit decisions through a future web app. The submitted task breakdown in
 
 ## Initial decisions
 
-- Historical seasons: **2023-2025**; update season: **2026**.
+- Historical seasons: **2021-2025**; update season: **2026**.
 - Prediction positions: **QB, RB, WR, TE**.
 - Scoring: **full PPR**. Scoring constants are recorded in `config/project.toml`.
 - Source: **nflverse**, accessed through its Python package **nflreadpy**.
@@ -65,7 +65,7 @@ selection, and the historical player-game table described below.
 
 The initial pipeline collected **29 Parquet files**, covering player statistics,
 team statistics, schedules, rosters, snap counts, and player/team reference data.
-The active historical range is **2023-2025**. Schedules and rosters for **2026** were also
+The active historical range is **2021-2025**. Schedules and rosters for **2026** were also
 available at the initial download. The pipeline supports current-season refreshes
 as new results become available and records download outcomes for review.
 
@@ -111,9 +111,15 @@ the data and rebuilds both historical and upcoming-game datasets.
 ## Task 2: Machine Learning Comparison
 
 Added recent passing-attempt, passing-yard, and passing-touchdown averages.
-Trained Linear Regression, Random Forest, and XGBoost on 2023 player-game records
+Trained Linear Regression, Random Forest, and XGBoost on 2021-2023 player-game records
 and compared them with a recent-PPR-average baseline on the same eligible 2024
 records. Results include MAE, RMSE, and R-squared overall and by position,
 training times, and predicted versus actual points. This comparison uses initial
 model settings without tuning or selecting a winner. The 2025 season remains
 reserved for final testing.
+
+Added season-to-date averages for PPR, targets, carries, snap share, and passing
+attempts/yards/touchdowns, plus a count of prior appearances that season. These
+use earlier games only and reset each NFL season. Separate experiments compared
+the original setup, expanded training history, and expanded history with these
+new features on identical 2024 validation records.
