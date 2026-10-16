@@ -40,15 +40,14 @@ SEASON_FEATURES = [
 NUMERIC_FEATURES = RECENT_FEATURES + SEASON_FEATURES
 
 
-def split_records(frame, training_seasons=TRAIN_SEASONS, numeric_features=NUMERIC_FEATURES):
-    if not training_seasons or any(s >= VALIDATION_SEASON for s in training_seasons):
-        raise ValueError("Training seasons must precede the 2024 validation season")
+def select_records(frame, seasons, numeric_features=NUMERIC_FEATURES):
+    """Apply the same eligibility rules to evaluation and production training."""
     required = set(IDENTIFIERS + list(numeric_features) + [TARGET, "eligible_recent_participation"])
     missing = sorted(required - set(frame.columns))
     if missing:
         raise ValueError(f"Missing feature columns: {missing}. Run fantasy_football.update --local first.")
     splits, counts = {}, {}
-    for season in (*training_seasons, VALIDATION_SEASON):
+    for season in seasons:
         rows = frame.filter(pl.col("season") == season)
         report = {"available": rows.height, "excluded": {}}
         checks = [
@@ -66,9 +65,18 @@ def split_records(frame, training_seasons=TRAIN_SEASONS, numeric_features=NUMERI
         require_unique(rows, ["player_id", "game_id"], f"Model records {season}")
         splits[season] = rows.sort("game_date", "game_id", "player_id")
         counts[str(season)] = report | {"included": rows.height}
-    training = pl.concat([splits[s] for s in training_seasons]).sort("game_date", "game_id", "player_id")
-    require_unique(training, ["player_id", "game_id"], "Training records")
-    return training, splits[VALIDATION_SEASON], counts
+    selected = pl.concat(list(splits.values())).sort("game_date", "game_id", "player_id")
+    require_unique(selected, ["player_id", "game_id"], "Model records")
+    return selected, counts
+
+
+def split_records(frame, training_seasons=TRAIN_SEASONS, numeric_features=NUMERIC_FEATURES,
+                  evaluation_season=VALIDATION_SEASON):
+    if not training_seasons or any(s >= evaluation_season for s in training_seasons):
+        raise ValueError(f"Training seasons must precede the {evaluation_season} evaluation season")
+    training, counts = select_records(frame, training_seasons, numeric_features)
+    evaluation, evaluation_counts = select_records(frame, [evaluation_season], numeric_features)
+    return training, evaluation, counts | evaluation_counts
 
 
 def model_inputs(frame, numeric_features=NUMERIC_FEATURES):

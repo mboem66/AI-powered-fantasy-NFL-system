@@ -19,15 +19,15 @@ from fantasy_football.modeling.prepare import (
 )
 
 
-def evaluate(predictions):
-    """Score all four approaches on identical rows, overall and by position."""
+def evaluate(predictions, methods=METHODS):
+    """Score the requested approaches on identical rows, overall and by position."""
     results = []
     for group in ["overall", *POSITIONS]:
         rows = predictions if group == "overall" else predictions.filter(pl.col("position") == group)
         if rows.is_empty():
             continue
         actual = rows[TARGET].to_numpy()
-        for method in METHODS:
+        for method in methods:
             predicted = rows[f"{method}_prediction"].to_numpy()
             results.append({
                 "model": method, "position": group, "records": rows.height,

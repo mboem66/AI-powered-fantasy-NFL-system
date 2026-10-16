@@ -114,12 +114,25 @@ Added recent passing-attempt, passing-yard, and passing-touchdown averages.
 Trained Linear Regression, Random Forest, and XGBoost on 2021-2023 player-game records
 and compared them with a recent-PPR-average baseline on the same eligible 2024
 records. Results include MAE, RMSE, and R-squared overall and by position,
-training times, and predicted versus actual points. This comparison uses initial
-model settings without tuning or selecting a winner. The 2025 season remains
-reserved for final testing.
+training times, and predicted versus actual points.
 
 Added season-to-date averages for PPR, targets, carries, snap share, and passing
 attempts/yards/touchdowns, plus a count of prior appearances that season. These
 use earlier games only and reset each NFL season. Separate experiments compared
 the original setup, expanded training history, and expanded history with these
 new features on identical 2024 validation records.
+
+Selected **Linear Regression** after comparing the models and additional local
+experiments. The fixed setup was retrained on **2021-2024** and evaluated on the
+held-out **2025** season (5,332 eligible player-game records).
+
+| Model | 2025 MAE | 2025 RMSE | 2025 R-squared |
+| --- | ---: | ---: | ---: |
+| Recent-average baseline | 4.867 | 6.821 | 0.274 |
+| Linear Regression | **4.533** | **6.214** | **0.397** |
+
+Added a saved production model with its preprocessing and training cutoff.
+Production training uses completed history, including available current-season
+games. Dated CSV and Parquet outputs contain predicted full-PPR points for eligible
+players in each team's next unstarted game. The final test and earlier comparisons
+are preserved separately from these weekly prediction runs.
