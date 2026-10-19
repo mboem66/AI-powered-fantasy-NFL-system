@@ -1,0 +1,13 @@
+# Small first experiment; select epochs on 2024, never on 2025.
+hidden_size = 32
+dense_size = 16
+batch_size = 128
+learning_rate = 0.001
+weight_decay = 0.0001
+max_epochs = 60
+patience = 8
+min_delta = 0.001
+seed = 42
+
+# Future evaluation begins after model development. Keep these forecasts separate.
+future_test_start = "2026-10-27"

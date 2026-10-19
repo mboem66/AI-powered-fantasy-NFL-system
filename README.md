@@ -136,3 +136,14 @@ Production training uses completed history, including available current-season
 games. Dated CSV and Parquet outputs contain predicted full-PPR points for eligible
 players in each team's next unstarted game. The final test and earlier comparisons
 are preserved separately from these weekly prediction runs.
+
+## Task 3: Deep Learning Sequential Prediction
+
+Implemented an LSTM that uses each player's season-to-date game sequence.
+Saved training curves, model comparisons, and dated weekly predictions alongside
+the Linear Regression workflow. Both models remain available to use.
+
+Training used 2021-2023, with early stopping on 2024 and a separate retrospective
+2025 comparison. Results were mixed: the LSTM improved validation MAE but did not
+outperform Linear Regression on overall retrospective MAE. The final model choice
+for the web app remains open.
