@@ -16,3 +16,4 @@ tests/test_player_games.py
 tests/test_features.py
 tests/test_modeling.py
 tests/test_lstm.py
+tests/test_transformer.py
