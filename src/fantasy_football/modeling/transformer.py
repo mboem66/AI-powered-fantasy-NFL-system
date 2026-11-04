@@ -23,7 +23,10 @@ class SeasonTransformer(nn.Module):
             dim_feedforward=options["feedforward_size"], dropout=options["dropout"],
             batch_first=True,
         )
-        self.encoder = nn.TransformerEncoder(layer, num_layers=1, enable_nested_tensor=False)
+        # Older saved experiments default to the original single encoder block.
+        self.encoder = nn.TransformerEncoder(
+            layer, num_layers=options.get("num_layers", 1), enable_nested_tensor=False,
+        )
         self.output = nn.Sequential(
             nn.Linear(width + len(CONTEXT_FIELDS) + len(POSITIONS), options["dense_size"]),
             nn.ReLU(), nn.Linear(options["dense_size"], 1),

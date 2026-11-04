@@ -1,0 +1,6 @@
+# Manual refresh: python -m fantasy_football.data.refresh_availability
+enabled = true
+league_id = 1
+max_snapshot_age_hours = 24
+# More distant games need a later availability check, especially around byes.
+max_game_days_ahead = 7

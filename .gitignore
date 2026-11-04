@@ -4,6 +4,8 @@ __pycache__/
 *.egg-info/
 .pytest_cache/
 .env
+.env.*
+data/api_nfl/
 data/**/*.parquet
 data/manifests/*.json
 artifacts/*
@@ -17,3 +19,4 @@ tests/test_features.py
 tests/test_modeling.py
 tests/test_lstm.py
 tests/test_transformer.py
+tests/test_availability.py

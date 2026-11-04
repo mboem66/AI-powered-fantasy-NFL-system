@@ -1,4 +1,4 @@
-"""Compare a small Transformer and the original LSTM on 2024 development data."""
+"""Compare original and deeper/wider Transformers with LSTM on 2024 data."""
 
 from datetime import datetime, timezone
 from hashlib import sha256
@@ -38,10 +38,14 @@ def run(root=PROJECT_ROOT):
         save_sequences(valid_data, folder, "validation")
         predictions = validation.select(*IDENTIFIERS, TARGET).with_columns(pl.Series("sequence_length", valid_data["lengths"]))
         metrics, runs = [], {}
-        # Both models use the same data, seed, optimizer settings and stopping rule.
+        # All candidates use the same data, seed, optimizer and stopping rule.
         for name, module, settings in [
             ("lstm", lstm, options),
             ("transformer", transformer, options | {"attention_heads": 4, "feedforward_size": 64, "dropout": 0.1}),
+            ("transformer_deep_wide", transformer, options | {
+                "num_layers": 2, "hidden_size": 64, "attention_heads": 4,
+                "feedforward_size": 128, "dropout": 0.2,
+            }),
         ]:
             print(f"Training {name} on 2021-2023; validating on 2024", flush=True)
             started = perf_counter()

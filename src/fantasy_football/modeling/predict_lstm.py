@@ -12,6 +12,7 @@ import polars as pl
 
 from fantasy_football.config import PROJECT_ROOT, load_settings
 from fantasy_football.data.cleaning import require_unique
+from fantasy_football.data.availability import apply_availability, prediction_columns
 from fantasy_football.features.build_features import build, EASTERN, next_games
 from fantasy_football.modeling import lstm
 from fantasy_football.modeling.prepare import IDENTIFIERS, TARGET, POSITIONS, make_model, model_inputs, select_records
@@ -50,6 +51,7 @@ def run(root=PROJECT_ROOT, model_run=None, settings=None, now=None):
         (pl.col("history_games") > 0) & pl.col("ppr_recent_avg").is_finite()
     ).sort("game_date", "game_id", "position", "player_id")
     require_unique(upcoming, ["player_id", "game_id"], "LSTM upcoming pool")
+    upcoming, availability = apply_availability(upcoming, root, settings, now)
     if upcoming.is_empty():
         print("No eligible unstarted games; previous forecasts preserved.")
         return None
@@ -73,7 +75,7 @@ def run(root=PROJECT_ROOT, model_run=None, settings=None, now=None):
         combined = np.where(has_history, raw, linear_predictions)
         if not np.isfinite(combined).all():
             raise ValueError("Nonfinite weekly predictions")
-        predictions = upcoming.select(IDENTIFIERS).with_columns(
+        predictions = upcoming.select(*IDENTIFIERS, *prediction_columns(upcoming)).with_columns(
             pl.Series("sequence_length", future_data["lengths"]),
             pl.Series("lstm_prediction", raw).fill_nan(None),
             pl.Series("linear_regression_prediction", linear_predictions),
@@ -87,6 +89,7 @@ def run(root=PROJECT_ROOT, model_run=None, settings=None, now=None):
         save_sequences(future_data, folder, "upcoming")
         pl.DataFrame(curve).write_csv(folder / "training_curve.csv")
         report = {"created_at_utc": now.isoformat(), "selection_run": str(model_run),
+                  "availability": availability,
                   "options": options, "epochs": epochs, "training_cutoff_exclusive": str(training_cutoff),
                   "training_latest_game": str(training["game_date"].max()), "training_records": counts,
                   "feature_cutoff_exclusive": str(today), "source_latest_game": feature_report["latest_source_game_date"],

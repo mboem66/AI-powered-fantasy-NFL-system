@@ -13,6 +13,7 @@ import polars as pl
 
 from fantasy_football.config import PROJECT_ROOT, load_settings
 from fantasy_football.data.cleaning import require_unique
+from fantasy_football.data.availability import apply_availability, prediction_columns
 from fantasy_football.features.build_features import build, EASTERN, next_games
 from fantasy_football.modeling.final_test import SELECTED_MODEL
 from fantasy_football.modeling.prepare import (
@@ -60,6 +61,7 @@ def run(root=PROJECT_ROOT, settings=None, now=None):
         pl.col("ppr_recent_avg").is_finite()
     ).sort("game_date", "game_id", "position", "player_id")
     require_unique(upcoming, ["player_id", "game_id"], "Upcoming predictions")
+    upcoming, availability = apply_availability(upcoming, root, settings, now)
     if upcoming.is_empty():
         print("No eligible players in unstarted upcoming games; previous predictions preserved.")
         return None
@@ -69,6 +71,7 @@ def run(root=PROJECT_ROOT, settings=None, now=None):
     model.fit(model_inputs(training), training[TARGET].to_numpy())
     metadata = {
         "created_at_utc": now.isoformat(), "model": SELECTED_MODEL, "model_settings": {},
+        "availability": availability,
         "numeric_features": NUMERIC_FEATURES, "positions": POSITIONS,
         "training_seasons": seasons, "records": counts,
         "training_cutoff_exclusive": str(today), "training_latest_game": str(training["game_date"].max()),
@@ -91,7 +94,7 @@ def run(root=PROJECT_ROOT, settings=None, now=None):
         np.testing.assert_allclose(predicted, model.predict(inputs), rtol=1e-12, atol=1e-12)
         if not np.isfinite(predicted).all():
             raise ValueError("Upcoming predictions contain nonfinite values")
-        predictions = upcoming.select(IDENTIFIERS).with_columns(
+        predictions = upcoming.select(*IDENTIFIERS, *prediction_columns(upcoming)).with_columns(
             pl.Series("predicted_ppr_points", predicted),
             pl.lit(now.isoformat()).alias("predicted_at_utc"),
         )
