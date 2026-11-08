@@ -20,3 +20,4 @@ tests/test_modeling.py
 tests/test_lstm.py
 tests/test_transformer.py
 tests/test_availability.py
+tests/test_outlooks.py
