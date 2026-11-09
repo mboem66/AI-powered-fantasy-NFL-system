@@ -42,6 +42,8 @@ def main():
         parser.error("--run expects a folder name inside artifacts/task3/weekly")
     root = PROJECT_ROOT
     settings = tomllib.loads((root / "config/outlooks.toml").read_text())
+    availability_settings = tomllib.loads((root / "config/api_nfl.toml").read_text())
+    max_age_hours = availability_settings["max_snapshot_age_hours"]
     prompt = (root / "config/prompts/player_outlook.txt").read_text(encoding="utf-8")
     base = root / "artifacts/task3/weekly"
     folders = [base / args.run] if args.run else sorted(base.iterdir(), reverse=True)
@@ -81,7 +83,8 @@ def main():
               "season": args.season, "week": args.week, "model_digest": model,
               "counts": {"saved_weekly_predictions": predictions.height, "lstm_above_threshold": above_threshold,
                          "unstarted": unstarted_count, "selected": len(candidates)},
-              "settings": settings, "prompt": prompt, "feature_cutoff": str(cutoff),
+              "settings": settings, "availability_max_age_hours": max_age_hours,
+              "prompt": prompt, "feature_cutoff": str(cutoff),
               "league_reference_note": "Equal-team mean of last-three-game positional totals; reconstructed from current sources before cutoff, not a historical snapshot.",
               "source_hashes": {str(p.relative_to(root)): hashlib.sha256(p.read_bytes()).hexdigest()
                   for p in [root / "data/processed/player_games.parquet", *sorted((root / "data/raw/schedules").glob("*.parquet"))]},
@@ -96,7 +99,8 @@ def main():
             for game_id in rows[index]["history_game_ids"]:
                 if game_id not in schedules or date.fromisoformat(schedules[game_id]["gameday"]) >= min(cutoff, prediction["game_date"]):
                     raise ValueError("Saved sequence contains unknown or post-cutoff game")
-            facts = context(prediction, rows[index], arrays["values"][index, :arrays["lengths"][index]], reference, cutoff)
+            facts = context(prediction, rows[index], arrays["values"][index, :arrays["lengths"][index]],
+                            reference, cutoff, datetime.now(timezone.utc), max_age_hours)
             key = digest({"facts": facts, "prompt": prompt, "settings": settings, "model": model,
                           "prediction_run": str(folder), "validator_version": 2})
             cached = cache / f"{key}.json"
@@ -115,9 +119,9 @@ def main():
             result = dict(result, player=name, player_id=prediction["player_id"], game_id=prediction["game_id"], cache_key=key)
             if not unstarted(schedules.get(prediction["game_id"]), datetime.now(timezone.utc)):
                 result["errors"].append("Game started during generation")
-            result["outlook"] = "" if result["errors"] else " ".join([
+            result["outlook"] = "" if result["errors"] else " ".join(part for part in [
                 result["draft"]["projection"], result["draft"]["performance"],
-                facts["matchup_sentence"], facts["availability_sentence"]])
+                facts["matchup_sentence"], facts["availability_sentence"]] if part)
         except (ValueError, KeyError, requests.RequestException) as exc:
             result = {"player": name, "errors": [str(exc)], "outlook": ""}
         report["results"].append(result)

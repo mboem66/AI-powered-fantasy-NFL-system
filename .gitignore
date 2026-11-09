@@ -21,3 +21,4 @@ tests/test_lstm.py
 tests/test_transformer.py
 tests/test_availability.py
 tests/test_outlooks.py
+tests/test_weekly_report.py

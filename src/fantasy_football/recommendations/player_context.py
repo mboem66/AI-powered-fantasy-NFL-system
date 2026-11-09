@@ -1,6 +1,6 @@
 """Assemble outlook facts from a saved forecast, without rebuilding predictions."""
 
-from datetime import datetime
+from datetime import datetime, timezone
 from math import isfinite, isclose
 from statistics import mean
 from zoneinfo import ZoneInfo
@@ -43,14 +43,29 @@ def number(value):
     return f"{float(value):.1f}"
 
 
-def availability_sentence(row):
+def availability_sentence(row, now=None, max_age_hours=24):
     """A retrieval timestamp does not establish when an injury status changed."""
-    status = row.get("availability_status") or "unknown"
+    now = now or datetime.now(timezone.utc)
+    status = (row.get("availability_status") or "unknown").strip()
     decision = row.get("availability_decision") or "unknown"
     checked = row.get("availability_checked_at") or "unknown"
     if "identity" in decision or "roster" in decision or "team_change" in decision:
         return "Availability is unconfirmed because the saved roster or identity match needs review."
-    if status.lower() in {"not_listed", "not listed", "unknown", ""}:
+    if status.lower() in {"not_listed", "not listed"}:
+        # Measure freshness when writing the outlook, not when the forecast ran.
+        try:
+            retrieved = datetime.fromisoformat(str(checked).replace("Z", "+00:00"))
+            age_hours = (now - retrieved).total_seconds() / 3600 if retrieved.tzinfo else None
+        except (ValueError, TypeError):
+            age_hours = None
+        if age_hours is None or age_hours < 0:
+            return "The saved availability snapshot has no reliable retrieval time; check for updates before kickoff."
+        if age_hours > max_age_hours:
+            return f"The saved availability snapshot was retrieved {checked} and is outdated; check for updates before kickoff."
+        if decision == "include" and not row.get("injury_description"):
+            return ""
+        return "The saved availability information needs review; check for updates before kickoff."
+    if status.lower() in {"unknown", ""}:
         return "The saved snapshot does not confirm game-day availability; check for updates before kickoff."
     detail = str(row.get("injury_description") or "no injury detail supplied").strip().rstrip(".")
     reported = row.get("injury_report_date") or "unknown"
@@ -59,7 +74,7 @@ def availability_sentence(row):
             "which does not confirm current game-day availability.")
 
 
-def context(prediction, row, sequence, reference, cutoff):
+def context(prediction, row, sequence, reference, cutoff, now=None, max_age_hours=24):
     if prediction["prediction_method"] != "lstm":
         raise ValueError("Only LSTM predictions are supported")
     for field in ("player_id", "game_id", "season", "week", "position", "sequence_length"):
@@ -99,7 +114,7 @@ def context(prediction, row, sequence, reference, cutoff):
         matchup = (f"{opponent} allowed {saved:.1f} PPR per game to opposing {row['position']} groups over its last three games "
                    f"versus a {avg:.1f} league reference, a {direction} matchup indicator rather than a guarantee.")
     return {"writing_facts": facts, "matchup_sentence": matchup,
-            "availability_sentence": availability_sentence(row), "feature_cutoff": str(cutoff),
+            "availability_sentence": availability_sentence(row, now, max_age_hours), "feature_cutoff": str(cutoff),
             "availability_source": {k: row.get(k) for k in ("availability_status", "injury_description",
                 "injury_report_date", "availability_checked_at", "availability_decision")},
             "league_reference_teams": len(league), "history_game_ids": row["history_game_ids"]}
