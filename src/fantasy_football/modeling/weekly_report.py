@@ -26,13 +26,30 @@ def kickoff(row):
         tzinfo=ZoneInfo("America/New_York"))
 
 
-def select_forecasts(root, season, week, schedules, now):
+EXPERIMENT_MODELS = ("linear_control", "lstm_control", "deep_lstm", "deep_transformer", "transformer_lstm")
+
+
+def select_forecasts(root, season, week, schedules, now, experiments=False, version=None):
     """Choose independently for each pipeline; never scan backtest folders."""
     selected, audit = {}, Counter()
-    for task, model in [("task2", "linear"), ("task3", "lstm")]:
-        for path in sorted((root / f"artifacts/{task}/weekly").glob("*/predictions.parquet")):
-            if not (path.parent / "summary.json").exists() or path.parent.name.startswith("pending_"):
+    sources = []
+    if experiments:
+        manifests = sorted((root / "artifacts/model_experiments/weekly").glob("*/summary.json"))
+        versions = {json.loads(p.read_text())["experiment_version"] for p in manifests if not p.parent.name.startswith("pending_")}
+        if version is None and len(versions) > 1:
+            raise ValueError(f"Multiple experiment versions: {sorted(versions)}. Select one with --version.")
+        for manifest in manifests:
+            info = json.loads(manifest.read_text())
+            if manifest.parent.name.startswith("pending_") or (version and info["experiment_version"] != version):
                 continue
+            for model in EXPERIMENT_MODELS:
+                sources.append((model, manifest.parent / model / "predictions.parquet"))
+    else:
+        for task, model in [("task2", "linear"), ("task3", "lstm")]:
+            sources.extend((model, p) for p in sorted((root / f"artifacts/{task}/weekly").glob("*/predictions.parquet"))
+                           if (p.parent / "summary.json").exists() and not p.parent.name.startswith("pending_"))
+    for model, path in sources:
+        if path.exists():
             frame = pl.read_parquet(path).filter((pl.col("season") == season) & (pl.col("week") == week))
             if frame.unique(["player_id", "game_id"]).height != frame.height:
                 raise ValueError(f"Duplicate player-game records in {path}")
@@ -54,7 +71,7 @@ def select_forecasts(root, season, week, schedules, now):
                     continue
                 key = (row["player_id"], row["game_id"], model)
                 if key not in selected or saved > timestamp(selected[key]["predicted_at_utc"]):
-                    selected[key] = row | {"source_run": path.parent.name}
+                    selected[key] = row | {"source_run": path.parent.parent.name if experiments else path.parent.name}
     return selected, dict(audit)
 
 
@@ -65,12 +82,13 @@ def metric(rows, model, scope, position):
             "rmse": sqrt(sum(e * e for e in errors) / len(errors)) if errors else None}
 
 
-def build(root=PROJECT_ROOT, season=2026, week=9, now=None):
+def build(root=PROJECT_ROOT, season=2026, week=9, now=None, experiments=False, version=None):
     now = now or datetime.now(timezone.utc)
+    model_names = EXPERIMENT_MODELS if experiments else ("linear", "lstm")
     schedule_frame = pl.read_parquet(root / f"data/raw/schedules/{season}.parquet").filter(
         (pl.col("season") == season) & (pl.col("week") == week) & (pl.col("game_type") == "REG"))
     schedules = {r["game_id"]: r for r in schedule_frame.to_dicts()}
-    selected, audit = select_forecasts(root, season, week, schedules, now)
+    selected, audit = select_forecasts(root, season, week, schedules, now, experiments, version)
     if not selected:
         raise ValueError("No eligible saved pregame predictions found for this week")
     actual_frame = pl.read_parquet(root / "data/processed/player_games.parquet").filter(
@@ -80,7 +98,7 @@ def build(root=PROJECT_ROOT, season=2026, week=9, now=None):
     actuals = {(r["player_id"], r["game_id"]): r["calculated_ppr_points"] for r in actual_frame.to_dicts()}
     rows = []
     for player, game_id in sorted({(p, g) for p, g, _ in selected}):
-        forecasts = {model: selected.get((player, game_id, model)) for model in ("linear", "lstm")}
+        forecasts = {model: selected.get((player, game_id, model)) for model in model_names}
         identity = max((f for f in forecasts.values() if f), key=lambda f: timestamp(f["predicted_at_utc"]))
         game = schedules[game_id]
         start = kickoff(game)
@@ -107,21 +125,23 @@ def build(root=PROJECT_ROOT, season=2026, week=9, now=None):
     # Task 3 can contain Linear fallback predictions. Keep them visible, but do
     # not count them as LSTM performance or as genuine head-to-head LSTM rows.
     eligible = {m: [r for r in matched if r[f"{m}_projected_ppr"] is not None and
-                    (m != "lstm" or r["lstm_method"] == "lstm")] for m in ("linear", "lstm")}
-    common = [r for r in eligible["lstm"] if r["linear_projected_ppr"] is not None]
+                    (m != "lstm" or r["lstm_method"] == "lstm")] for m in model_names}
+    common = [r for r in matched if all(r[f"{m}_projected_ppr"] is not None for m in model_names)
+              and (experiments or r["lstm_method"] == "lstm")]
     for scope in ("all_available", "same_player_games"):
-        for model in ("linear", "lstm"):
+        for model in model_names:
             pool = common if scope == "same_player_games" else eligible[model]
             for position in ("overall", "QB", "RB", "WR", "TE"):
                 group = pool if position == "overall" else [r for r in pool if r["position"] == position]
                 metrics.append(metric(group, model, scope, position))
     report = {"season": season, "week": week, "created_at_utc": now.isoformat(),
+              "experimental_comparison": experiments, "experiment_version_filter": version,
               "unique_player_games": len(rows), "result_status_counts": dict(Counter(r["result_status"] for r in rows)),
-              "forecast_counts": {m: sum(r[f"{m}_projected_ppr"] is not None for r in rows) for m in ("linear", "lstm")},
-              "lstm_fallback_rows": sum(r["lstm_method"] == "linear_fallback" for r in rows),
+              "forecast_counts": {m: sum(r[f"{m}_projected_ppr"] is not None for r in rows) for m in model_names},
+              "lstm_fallback_rows": sum(r.get("lstm_method") == "linear_fallback" for r in rows),
               "selection_audit": audit, "metrics": metrics,
               "note": "Latest saved pre-kickoff prediction per pipeline; current saved schedules define kickoff. Same-player comparisons may use different forecast times. Missing actuals remain missing; retrospective backtests excluded."}
-    output = root / "artifacts/weekly_reports" / f"{season}_week_{week:02d}" / now.strftime("%Y%m%dT%H%M%S%fZ")
+    output = root / ("artifacts/model_experiments/reports" if experiments else "artifacts/weekly_reports") / f"{season}_week_{week:02d}" / now.strftime("%Y%m%dT%H%M%S%fZ")
     output.mkdir(parents=True)
     pl.DataFrame(rows, infer_schema_length=None).sort("game_date", "team", "position", "player_display_name").write_csv(output / "players.csv")
     pl.DataFrame(metrics).write_csv(output / "metrics.csv")
@@ -132,7 +152,7 @@ def build(root=PROJECT_ROOT, season=2026, week=9, now=None):
     (output / "summary.json").write_text(json.dumps(report, indent=2), encoding="utf-8")
     print(f"{season} Week {week}: {len(rows)} unique player-games")
     print("Forecasts:", report["forecast_counts"], "| Results:", report["result_status_counts"])
-    with pl.Config(float_precision=3, tbl_rows=20, tbl_formatting="ASCII_MARKDOWN"):
+    with pl.Config(float_precision=3, tbl_rows=20, tbl_cols=-1, tbl_width_chars=150, tbl_formatting="ASCII_MARKDOWN"):
         print(pl.DataFrame(metrics).filter(pl.col("position") == "overall"))
         if report["largest_misses"]:
             print("Largest prediction misses (available results):")
@@ -145,5 +165,7 @@ if __name__ == "__main__":
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("--week", type=int, required=True)
     parser.add_argument("--season", type=int, default=load_settings()["data"]["current_season"])
+    parser.add_argument("--experiments", action="store_true", help="Compare the five models from shared experimental runs")
+    parser.add_argument("--version", help="Experimental version ID when multiple configurations exist")
     args = parser.parse_args()
-    build(season=args.season, week=args.week)
+    build(season=args.season, week=args.week, experiments=args.experiments, version=args.version)

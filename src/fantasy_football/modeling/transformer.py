@@ -32,7 +32,7 @@ class SeasonTransformer(nn.Module):
             nn.ReLU(), nn.Linear(options["dense_size"], 1),
         )
 
-    def forward(self, sequences, lengths, context):
+    def encode(self, sequences, lengths):
         if torch.any(lengths <= 0) or torch.any(lengths > sequences.shape[1]):
             raise ValueError("Transformer requires nonempty, valid sequence lengths")
         steps = torch.arange(sequences.shape[1], device=sequences.device)
@@ -47,6 +47,10 @@ class SeasonTransformer(nn.Module):
         positions[:, 1::2] = angles[:, :width // 2].cos()
         # All real timesteps are earlier games; no target-game token is present.
         encoded = self.encoder(values + positions, src_key_padding_mask=padding)
+        return encoded, padding
+
+    def forward(self, sequences, lengths, context):
+        encoded, padding = self.encode(sequences, lengths)
         pooled = encoded.masked_fill(padding[:, :, None], 0.0).sum(1) / lengths[:, None]
         return self.output(torch.cat([pooled, context], dim=1)).squeeze(1)
 

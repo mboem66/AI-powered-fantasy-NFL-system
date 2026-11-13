@@ -1,5 +1,5 @@
 # Local writing model; the saved LSTM forecast supplies the points.
-model = "qwen3:8b"
+model = "qwen3.5:9b"
 url = "http://localhost:11434"
 minimum_ppr = 5.0
 timeout_seconds = 180

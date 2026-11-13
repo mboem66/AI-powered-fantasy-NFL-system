@@ -1,0 +1,31 @@
+# Separate prospective comparison. Select epochs on 2024, never current results.
+[training]
+batch_size = 128
+learning_rate = 0.001
+weight_decay = 0.0001
+max_epochs = 60
+patience = 8
+min_delta = 0.001
+seed = 42
+dense_size = 16
+
+[models.deep_lstm]
+hidden_size = 32
+num_layers = 2
+dropout = 0.2
+
+[models.deep_transformer]
+hidden_size = 64
+num_layers = 2
+attention_heads = 4
+feedforward_size = 128
+dropout = 0.2
+
+[models.transformer_lstm]
+# Encode all earlier games, then process them chronologically through an LSTM.
+hidden_size = 32
+num_layers = 1
+attention_heads = 4
+feedforward_size = 64
+dropout = 0.1
+lstm_hidden_size = 32

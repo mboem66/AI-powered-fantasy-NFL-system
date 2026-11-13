@@ -49,7 +49,7 @@ def infer(model, inputs, batch_size):
                           for start in range(0, len(inputs[0]), batch_size)]).numpy()
 
 
-def fit(data, options, validation=None, epochs=None):
+def fit(data, options, validation=None, epochs=None, model_factory=None):
     """Early-stop on 2024 MAE, or refit for a previously selected epoch count."""
     torch.set_num_threads(1)
     torch.manual_seed(options["seed"])
@@ -62,7 +62,7 @@ def fit(data, options, validation=None, epochs=None):
     valid_indices, valid_inputs = tensors(validation, preprocessing) if validation is not None else (None, None)
     if validation is not None and valid_inputs is None:
         raise ValueError("No validation examples have current-season history")
-    model = SeasonLSTM(options)
+    model = (model_factory or SeasonLSTM)(options)
     optimizer = torch.optim.Adam(model.parameters(), lr=options["learning_rate"], weight_decay=options["weight_decay"])
     best_mae, best_epoch, stale, curve = float("inf"), 0, 0, []
     best_weights = None
@@ -102,14 +102,14 @@ def fit(data, options, validation=None, epochs=None):
             "options": options, "epochs": best_epoch}, curve
 
 
-def predict(bundle, data):
+def predict(bundle, data, model_factory=None):
     torch.set_num_threads(1)
     output = np.full(data["rows"].height, np.nan)
     if not len(output):
         return output
     indices, inputs = tensors(data, bundle["preprocessing"])
     if inputs is not None:
-        model = SeasonLSTM(bundle["options"])
+        model = (model_factory or SeasonLSTM)(bundle["options"])
         model.load_state_dict(bundle["weights"])
         p = bundle["preprocessing"]
         output[indices] = infer(model, inputs, bundle["options"]["batch_size"]) * p["target_scale"] + p["target_mean"]
