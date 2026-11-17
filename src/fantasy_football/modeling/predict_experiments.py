@@ -5,7 +5,7 @@ from datetime import date, datetime, timezone
 from hashlib import sha256
 import json
 from pathlib import Path
-from tempfile import TemporaryDirectory
+from fantasy_football.data.storage import pending_run, publish_run
 import tomllib
 
 import joblib
@@ -38,7 +38,7 @@ def select_epochs(root, games, features, settings):
         return destination, json.loads((destination / 'summary.json').read_text())
     train_data, valid_data = make_sequences(training, historical), make_sequences(validation, historical)
     destination.parent.mkdir(parents=True, exist_ok=True)
-    with TemporaryDirectory(dir=destination.parent, prefix='pending_') as temp:
+    with pending_run(destination.parent) as temp:
         folder = Path(temp) / 'result'
         folder.mkdir()
         report = {'version': version, 'identity': identity, 'models': {},
@@ -63,7 +63,7 @@ def select_epochs(root, games, features, settings):
             pl.DataFrame(curve).write_csv(folder_model / 'learning_curve.csv')
         validation_predictions.write_parquet(folder / 'validation_predictions.parquet')
         (folder / 'summary.json').write_text(json.dumps(report, indent=2))
-        folder.rename(destination)
+        publish_run(folder, destination)
     return destination, report
 
 
@@ -124,7 +124,7 @@ def run(root=PROJECT_ROOT, source_run=None, week=None):
                            'source_lstm_options': info['options'], 'source_lstm_epochs': info['epochs']})
     parent = root / 'artifacts/model_experiments/weekly'
     parent.mkdir(parents=True, exist_ok=True)
-    with TemporaryDirectory(dir=parent, prefix='pending_') as temp:
+    with pending_run(parent) as temp:
         folder = Path(temp) / 'result'
         folder.mkdir()
         for name, selected in selection['models'].items():
@@ -162,7 +162,7 @@ def run(root=PROJECT_ROOT, source_run=None, week=None):
                     'note':'Same snapshot, training cutoff and scored population for all five models. CPU. No fallback. Frozen training cutoff inherited from LSTM. Forecast timestamps reflect completion, not training start.'}
         (folder/'summary.json').write_text(json.dumps(metadata,indent=2))
         output=parent/finished.strftime('%Y%m%dT%H%M%S%fZ')
-        folder.rename(output)
+        publish_run(folder, output)
     print('Saved five-model forecasts:',output,flush=True)
     print('Experiment version:',version,'| Counts:',metadata['counts_by_week'],flush=True)
     return output

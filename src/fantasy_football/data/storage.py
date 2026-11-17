@@ -2,8 +2,43 @@
 
 from pathlib import Path
 from tempfile import NamedTemporaryFile
+from tempfile import mkdtemp
+from contextlib import contextmanager
+from time import sleep
 
 import polars as pl
+
+
+@contextmanager
+def pending_run(parent: Path):
+    """Keep a failed run for inspection instead of deleting trained outputs."""
+    temporary = Path(mkdtemp(dir=parent, prefix="pending_"))
+    try:
+        yield temporary
+    except BaseException:
+        print(f"Unpublished run retained for inspection: {temporary}", flush=True)
+        raise
+    else:
+        # After publishing, only the empty staging directory remains.
+        try:
+            temporary.rmdir()
+        except OSError:
+            pass
+
+
+def publish_run(source: Path, destination: Path, attempts=8):
+    """Retry temporary Windows locks without overwriting an existing run."""
+    for attempt in range(attempts):
+        if destination.exists():
+            raise FileExistsError(f"Run already exists; not overwritten: {destination}")
+        try:
+            source.rename(destination)
+            return
+        except PermissionError:
+            if attempt == attempts - 1:
+                raise
+            print(f"Windows blocked saving the run; retrying ({attempt + 1}/{attempts}).", flush=True)
+            sleep(min(0.5 * (attempt + 1), 2.0))
 
 
 def validate_download(frame: pl.DataFrame, season: int | None) -> None:

@@ -5,7 +5,7 @@ from datetime import datetime, timezone
 import json
 from pathlib import Path
 import re
-from tempfile import TemporaryDirectory
+from fantasy_football.data.storage import pending_run, publish_run
 import tomllib
 import unicodedata
 
@@ -85,7 +85,7 @@ def run(root=PROJECT_ROOT, settings=None, client=None, now=None):
     parent.mkdir(parents=True, exist_ok=True)
     output = parent / started.strftime("%Y%m%dT%H%M%S%fZ")
     try:
-        with TemporaryDirectory(dir=parent, prefix="pending_") as temporary:
+        with pending_run(parent) as temporary:
             folder = Path(temporary) / "result"
             folder.mkdir()
             leagues = client.get("/leagues", id=options["league_id"], season=season)
@@ -129,7 +129,7 @@ def run(root=PROJECT_ROOT, settings=None, client=None, now=None):
                       "unmatched_rows": frame.filter(pl.col("mapping_status") != "matched").height,
                       "note": "Current reports only. Not listed is not confirmed active. No dedicated inactive feed."}
             (folder / "summary.json").write_text(json.dumps(report, indent=2), encoding="utf-8")
-            folder.rename(output)
+            publish_run(folder, output)
             # Publish only after every team succeeded. Failed attempts leave latest untouched.
             pointer = parent / f"latest_{output.name}.tmp"
             pointer.write_text(json.dumps({"snapshot": output.name}), encoding="utf-8")

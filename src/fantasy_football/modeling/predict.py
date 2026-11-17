@@ -5,7 +5,7 @@ from hashlib import sha256
 from importlib.metadata import version
 import json
 from pathlib import Path
-from tempfile import TemporaryDirectory
+from fantasy_football.data.storage import pending_run, publish_run
 
 import joblib
 import numpy as np
@@ -83,7 +83,7 @@ def run(root=PROJECT_ROOT, settings=None, now=None):
     }
     output = root / "artifacts/task2/weekly" / now.strftime("%Y%m%dT%H%M%S%fZ")
     output.parent.mkdir(parents=True, exist_ok=True)
-    with TemporaryDirectory(dir=output.parent, prefix="pending_") as temporary:
+    with pending_run(output.parent) as temporary:
         staging = Path(temporary) / "result"
         staging.mkdir()
         joblib.dump({"pipeline": model, "metadata": metadata}, staging / "model.joblib")
@@ -101,7 +101,7 @@ def run(root=PROJECT_ROOT, settings=None, now=None):
         predictions.write_parquet(staging / "predictions.parquet", compression="zstd")
         predictions.write_csv(staging / "predictions.csv")
         (staging / "summary.json").write_text(json.dumps(metadata, indent=2), encoding="utf-8")
-        staging.rename(output)
+        publish_run(staging, output)
     print(f"Training: {training.height:,} records, through {metadata['training_latest_game']}.")
     print(f"Saved {upcoming.height} next-game predictions and model to {output}")
     print("These are each team's next game, so weeks may differ around byes. Saved sources were not downloaded.")

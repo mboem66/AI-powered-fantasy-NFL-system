@@ -4,7 +4,7 @@ import argparse
 from datetime import date, datetime, timezone
 import json
 from pathlib import Path
-from tempfile import TemporaryDirectory
+from fantasy_football.data.storage import pending_run, publish_run
 
 import joblib
 import numpy as np
@@ -64,7 +64,7 @@ def run(root=PROJECT_ROOT, model_run=None, settings=None, now=None):
     linear = make_model().fit(model_inputs(training), training[TARGET].to_numpy())
     output = root / "artifacts/task3/weekly" / now.strftime("%Y%m%dT%H%M%S%fZ")
     output.parent.mkdir(parents=True, exist_ok=True)
-    with TemporaryDirectory(dir=output.parent, prefix="pending_") as temporary:
+    with pending_run(output.parent) as temporary:
         folder = Path(temporary) / "result"
         folder.mkdir()
         lstm.save(bundle, folder / "model")
@@ -97,7 +97,7 @@ def run(root=PROJECT_ROOT, model_run=None, settings=None, now=None):
                   "fallback_rows": int((~has_history).sum()),
                   "note": "Experimental LSTM; Task 2 Linear remains available. Saved sources only; refresh with update first."}
         (folder / "summary.json").write_text(json.dumps(report, indent=2), encoding="utf-8")
-        folder.rename(output)
+        publish_run(folder, output)
     print(f"Saved {upcoming.height} predictions ({report['fallback_rows']} Linear fallbacks) to {output}", flush=True)
     return output
 
