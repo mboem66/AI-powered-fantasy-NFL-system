@@ -24,3 +24,4 @@ tests/test_outlooks.py
 tests/test_weekly_report.py
 tests/test_experimental_models.py
 tests/test_run_storage.py
+tests/test_recommendation_comparisons.py

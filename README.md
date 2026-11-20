@@ -147,3 +147,15 @@ Training used 2021-2023, with early stopping on 2024 and a separate retrospectiv
 2025 comparison. Results were mixed: the LSTM improved validation MAE but did not
 outperform Linear Regression on overall retrospective MAE. The final model choice
 for the web app remains open.
+
+## Task 4: Explainable Start/Sit Recommendations
+
+Added local Qwen player outlooks using saved LSTM projections, recent performance,
+usage, matchup context, and dated availability information. Two-player comparisons
+show the higher projection separately from Qwen's recommendation and supporting
+evidence, ready for integration into the future web app.
+
+Added experimental scoring ranges and pairwise scoring probabilities from historical
+LSTM errors, with a separate retrospective evaluation. Integrated Gradients shows
+how inputs contribute relative to a reference prediction. These estimates do not
+measure the probability of playing, and feature contributions are not causal claims.
