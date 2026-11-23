@@ -159,3 +159,15 @@ Added experimental scoring ranges and pairwise scoring probabilities from histor
 LSTM errors, with a separate retrospective evaluation. Integrated Gradients shows
 how inputs contribute relative to a reference prediction. These estimates do not
 measure the probability of playing, and feature contributions are not causal claims.
+
+## Task 5: Retrieval-Augmented Fantasy Assistant (First Stage)
+
+Added versioned player-week records from saved LSTM forecasts, performance and usage
+statistics, matchup context, availability reports, and matching player outlooks.
+The terminal assistant filters evidence by player and week, retrieves relevant
+passages, and uses local Qwen to answer with source references. Reports preserve
+the question, evidence, answer, and source timestamps for review. This first stage
+uses local keyword retrieval and does not retrieve external news.
+Added terminal conversations with saved player/week context and follow-up questions.
+Start/sit questions use the existing Task 4 comparison workflow; ambiguous references
+require a player name, and each turn checks saved sources again.

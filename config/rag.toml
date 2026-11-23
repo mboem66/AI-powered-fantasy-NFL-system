@@ -1,0 +1,4 @@
+# Local retrieval settings; Qwen connection/model settings stay in outlooks.toml.
+top_k = 6
+max_question_chars = 1000
+max_answer_sentences = 4
